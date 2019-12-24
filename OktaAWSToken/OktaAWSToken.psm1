@@ -44,6 +44,9 @@ function GetSAML {
     }
     $oktaaccount = SetAccount
     $orgurl = ($oktaaccount.organizationurl -split ('://'))[-1]
+
+    # Response Type: Authentication Transaction Model
+    # https://developer.okta.com/docs/reference/api/authn/#authentication-transaction-model
     [string]$APIUrl = "https://$orgurl/api/v1/authn"
     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($cred.password)
     # Creating the Json object
@@ -57,7 +60,8 @@ function GetSAML {
       Write-Error -Message 'Error during authenticating with given username/ password.'
       throw
     }
-    $status = (ConvertFrom-Json $OktaSession.Content).status
+    $Content = ConvertFrom-Json $OktaSession.Content
+    $status = $Content.status
     write-host "$status"
     if ($status -like 'MFA_REQUIRED') {
       # MFA Auth
@@ -106,14 +110,15 @@ function GetSAML {
       Write-Output $SamlResponse
     } # End if
     elseif ($status -like 'SUCCESS') {
-      # Password auth. This part has not be validated.
-      $AuthURI = "$($oktaaccount.appurl)"
+      # Password auth.
+      $sessionToken = $Content.sessionToken
+      $AuthURI = "$($oktaaccount.appurl)?onetimetoken=$sessionToken"
       Write-Verbose "AuthURI is: $AuthURI"
       <#
             The -UseBasicParsing here prevents the script from opening up extra browser session caused by DCOM parsing.
             However, the response isn't fully decoded in that case. Additional steps are taken for decoding.
         #>
-      $SamlAuth = Invoke-WebRequest -uri $AuthURI -SessionVariable okta -Body $BodyCred -ContentType "application/json" -UseBasicParsing
+      $SamlAuth = Invoke-WebRequest -uri $AuthURI -SessionVariable okta -UseBasicParsing
       $SamlResponse = $SamlAuth.inputfields | Where-Object name -like "saml*" | Select-Object -ExpandProperty value
       Write-Verbose "SamlResponse is: $SamlResponse"
       $SamlResponse = $SamlResponse.Replace("&#x2b;", "+").Replace("&#x3d;", "=")
