@@ -94,28 +94,28 @@ function GetSAML {
       $OneTimeToken = (ConvertFrom-Json  $MFAAuth.Content).sessiontoken
 
       $AuthURI = "$($oktaaccount.appurl)?onetimetoken=$OneTimeToken"
-      Write-Verbose "$AuthURI is: $AuthURI"
+      Write-Verbose "AuthURI is: $AuthURI"
       <#
             The -UseBasicParsing here prevents the script from opening up extra browser session caused by DCOM parsing.
             However, the response isn't fully decoded in that case. Additional steps are taken for decoding.
         #>
       $SamlAuth = Invoke-WebRequest -uri $AuthURI -SessionVariable okta -UseBasicParsing
       $SamlResponse = $SamlAuth.inputfields | Where-Object name -like "saml*" | Select-Object -ExpandProperty value
-      Write-Verbose "$SamlResponse is: $SamlResponse"
+      Write-Verbose "SamlResponse is: $SamlResponse"
       $SamlResponse = $SamlResponse.Replace("&#x2b;", "+").Replace("&#x3d;", "=")
       Write-Output $SamlResponse
     } # End if
     elseif ($status -like 'SUCCESS') {
       # Password auth. This part has not be validated.
       $AuthURI = "$($oktaaccount.appurl)"
-      Write-Verbose "$AuthURI is: $AuthURI"
+      Write-Verbose "AuthURI is: $AuthURI"
       <#
             The -UseBasicParsing here prevents the script from opening up extra browser session caused by DCOM parsing.
             However, the response isn't fully decoded in that case. Additional steps are taken for decoding.
         #>
       $SamlAuth = Invoke-WebRequest -uri $AuthURI -SessionVariable okta -Body $BodyCred -ContentType "application/json" -UseBasicParsing
       $SamlResponse = $SamlAuth.inputfields | Where-Object name -like "saml*" | Select-Object -ExpandProperty value
-      Write-Verbose "$SamlResponse is: $SamlResponse"
+      Write-Verbose "SamlResponse is: $SamlResponse"
       $SamlResponse = $SamlResponse.Replace("&#x2b;", "+").Replace("&#x3d;", "=")
       Write-Output $SamlResponse
     } # End elseif
